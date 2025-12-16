@@ -9,7 +9,7 @@
 
     <!-- Package Information -->
     <PackageId>Databento.Client</PackageId>
-    <Version>4.3.1</Version>
+    <Version>5.1.0</Version>
     <Authors>Alparse</Authors>
     <Company>Databento</Company>
     <Product>databento-dotnet</Product>
@@ -20,7 +20,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/Alparse/databento-dotnet</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>v4.3.1: Improving ReferenceClient.SecurityMaster</PackageReleaseNotes>
+    <PackageReleaseNotes>v5.1.0: Fix SecurityMasterRecord JSON deserialization - LotSize, VotePerSec now decimal?, SharesOutstanding and SharesOutstandingDate now string? to match API</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
     <!-- XML Documentation -->

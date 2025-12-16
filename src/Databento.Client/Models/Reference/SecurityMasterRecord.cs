@@ -177,7 +177,7 @@ public sealed class SecurityMasterRecord
 
     /// <summary>Lot size</summary>
     [JsonPropertyName("lot_size")]
-    public int? LotSize { get; set; }
+    public decimal? LotSize { get; set; }
 
     /// <summary>Par value</summary>
     [JsonPropertyName("par_value")]
@@ -193,15 +193,15 @@ public sealed class SecurityMasterRecord
 
     /// <summary>Votes per security</summary>
     [JsonPropertyName("vote_per_sec")]
-    public int? VotePerSec { get; set; }
+    public decimal? VotePerSec { get; set; }
 
     /// <summary>Shares outstanding</summary>
     [JsonPropertyName("shares_outstanding")]
-    public long? SharesOutstanding { get; set; }
+    public string? SharesOutstanding { get; set; }
 
     /// <summary>Shares outstanding date</summary>
     [JsonPropertyName("shares_outstanding_date")]
-    public DateOnly? SharesOutstandingDate { get; set; }
+    public string? SharesOutstandingDate { get; set; }
 
     /// <summary>Timestamp when record was created</summary>
     [JsonPropertyName("ts_created")]
