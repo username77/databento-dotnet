@@ -110,20 +110,17 @@ public enum VersionUpgradePolicy
 /// </summary>
 public enum JobState
 {
-    /// <summary>Job received, not yet queued</summary>
-    Received,
-
     /// <summary>Job queued for processing</summary>
-    Queued,
+    Queued = 0,
 
     /// <summary>Job currently processing</summary>
-    Processing,
+    Processing = 1,
 
     /// <summary>Job completed successfully</summary>
-    Done,
+    Done = 2,
 
     /// <summary>Job expired before completion</summary>
-    Expired
+    Expired = 3
 }
 
 /// <summary>
@@ -270,7 +267,6 @@ public static class ConfigEnumExtensions
     {
         return state switch
         {
-            JobState.Received => "received",
             JobState.Queued => "queued",
             JobState.Processing => "processing",
             JobState.Done => "done",
@@ -286,7 +282,6 @@ public static class ConfigEnumExtensions
     {
         return stateString.ToLowerInvariant() switch
         {
-            "received" => JobState.Received,
             "queued" => JobState.Queued,
             "processing" => JobState.Processing,
             "done" => JobState.Done,
