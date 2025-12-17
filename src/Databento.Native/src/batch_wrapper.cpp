@@ -173,6 +173,101 @@ DATABENTO_API const char* dbento_batch_submit_job(
     }
 }
 
+DATABENTO_API const char* dbento_batch_submit_job_ex(
+    DbentoHistoricalClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    int64_t start_time_ns,
+    int64_t end_time_ns,
+    int32_t encoding,
+    int32_t compression,
+    bool pretty_px,
+    bool pretty_ts,
+    bool map_symbols,
+    bool split_symbols,
+    int32_t split_duration,
+    uint64_t split_size,
+    int32_t delivery,
+    int32_t stype_in,
+    int32_t stype_out,
+    uint64_t limit,
+    char* error_buffer,
+    size_t error_buffer_size)
+{
+    try {
+        databento_native::ValidationError validation_error;
+        auto* wrapper = databento_native::ValidateAndCast<HistoricalClientWrapper>(
+            handle, databento_native::HandleType::HistoricalClient, &validation_error);
+        if (!wrapper || !wrapper->client) {
+            SafeStrCopy(error_buffer, error_buffer_size,
+                wrapper ? "Client not initialized" : databento_native::GetValidationErrorMessage(validation_error));
+            return nullptr;
+        }
+
+        // Comprehensive input validation
+        ValidateNonEmptyString("dataset", dataset);
+        ValidateNonEmptyString("schema", schema);
+        ValidateSymbolArray(symbols, symbol_count);
+        ValidateTimeRange(start_time_ns, end_time_ns);
+
+        // Convert symbols to vector
+        std::vector<std::string> symbol_vec;
+        if (symbols && symbol_count > 0) {
+            for (size_t i = 0; i < symbol_count; ++i) {
+                if (symbols[i]) {
+                    symbol_vec.emplace_back(symbols[i]);
+                }
+            }
+        }
+
+        // Parse schema (throws on invalid schema)
+        db::Schema schema_enum = ParseSchema(schema);
+
+        // Convert timestamps (throws on invalid range)
+        auto start_unix = NsToUnixNanos(start_time_ns);
+        auto end_unix = NsToUnixNanos(end_time_ns);
+        db::DateTimeRange<db::UnixNanos> datetime_range{start_unix, end_unix};
+
+        // Convert enums
+        db::Encoding encoding_enum = static_cast<db::Encoding>(encoding);
+        db::Compression compression_enum = static_cast<db::Compression>(compression);
+        db::SplitDuration split_duration_enum = static_cast<db::SplitDuration>(split_duration);
+        db::Delivery delivery_enum = static_cast<db::Delivery>(delivery);
+        db::SType stype_in_enum = static_cast<db::SType>(stype_in);
+        db::SType stype_out_enum = static_cast<db::SType>(stype_out);
+
+        // Submit batch job with all parameters
+        db::BatchJob job = wrapper->client->BatchSubmitJob(
+            dataset,
+            symbol_vec,
+            schema_enum,
+            datetime_range,
+            encoding_enum,
+            compression_enum,
+            pretty_px,
+            pretty_ts,
+            map_symbols,
+            split_symbols,
+            split_duration_enum,
+            split_size,
+            delivery_enum,
+            stype_in_enum,
+            stype_out_enum,
+            limit);
+
+        // Convert to JSON and return
+        json j = BatchJobToJson(job);
+        std::string json_str = j.dump();
+        return AllocateString(json_str);
+    }
+    catch (const std::exception& e) {
+        SafeStrCopy(error_buffer, error_buffer_size, e.what());
+        return nullptr;
+    }
+}
+
 DATABENTO_API const char* dbento_batch_list_jobs(
     DbentoHistoricalClientHandle handle,
     char* error_buffer,

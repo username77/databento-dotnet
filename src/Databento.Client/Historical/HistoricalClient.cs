@@ -1299,14 +1299,6 @@ public sealed class HistoricalClient : IHistoricalClient
     /// Submit a new batch job with advanced options for bulk historical data download.
     /// WARNING: This operation will incur a cost.
     /// </summary>
-    /// <remarks>
-    /// LOW FIX: This method is currently a stub that delegates to the basic version.
-    /// Advanced parameters (encoding, compression, prettyPx, etc.) are not yet implemented
-    /// and will be ignored. This functionality requires additional native wrapper implementation.
-    /// For now, use the basic <see cref="BatchSubmitJobAsync(string, IEnumerable{string}, Schema, DateTimeOffset, DateTimeOffset, CancellationToken)"/>
-    /// method which provides full functionality with default options.
-    /// </remarks>
-    [Obsolete("This overload is not yet fully implemented. Use the basic BatchSubmitJobAsync method instead. Advanced parameters are currently ignored.", false)]
     public async Task<BatchJob> BatchSubmitJobAsync(
         string dataset,
         IEnumerable<string> symbols,
@@ -1327,13 +1319,60 @@ public sealed class HistoricalClient : IHistoricalClient
         ulong limit,
         CancellationToken cancellationToken = default)
     {
-        // MEDIUM FIX: Validate input parameters for fail-fast behavior
+        ObjectDisposedException.ThrowIf(Interlocked.CompareExchange(ref _disposeState, 0, 0) != 0, this);
+
         ArgumentException.ThrowIfNullOrWhiteSpace(dataset, nameof(dataset));
         ArgumentNullException.ThrowIfNull(symbols, nameof(symbols));
 
-        // LOW FIX: Documented stub - delegates to basic version with defaults
-        // Advanced version would require additional native wrapper implementation
-        return await BatchSubmitJobAsync(dataset, symbols, schema, startTime, endTime, cancellationToken);
+        var symbolArray = symbols.ToArray();
+        Utilities.ErrorBufferHelpers.ValidateSymbolArray(symbolArray);
+
+        long startTimeNs = Utilities.DateTimeHelpers.ToUnixNanos(startTime);
+        long endTimeNs = Utilities.DateTimeHelpers.ToUnixNanos(endTime);
+
+        return await Task.Run(() =>
+        {
+            byte[] errorBuffer = new byte[Utilities.Constants.ErrorBufferSize];
+            var jsonPtr = NativeMethods.dbento_batch_submit_job_ex(
+                _handle,
+                dataset,
+                schema.ToSchemaString(),
+                symbolArray,
+                (nuint)symbolArray.Length,
+                startTimeNs,
+                endTimeNs,
+                (int)encoding,
+                (int)compression,
+                prettyPx,
+                prettyTs,
+                mapSymbols,
+                splitSymbols,
+                (int)splitDuration,
+                splitSize,
+                (int)delivery,
+                (int)stypeIn,
+                (int)stypeOut,
+                limit,
+                errorBuffer,
+                (nuint)errorBuffer.Length);
+
+            if (jsonPtr == IntPtr.Zero)
+            {
+                var error = Utilities.ErrorBufferHelpers.SafeGetString(errorBuffer);
+                throw new DbentoException($"Failed to submit batch job: {error}");
+            }
+
+            try
+            {
+                var json = Marshal.PtrToStringUTF8(jsonPtr) ?? "{}";
+                return JsonSerializer.Deserialize<BatchJob>(json)
+                    ?? throw new DbentoException("Failed to deserialize batch job");
+            }
+            finally
+            {
+                NativeMethods.dbento_free_string(jsonPtr);
+            }
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

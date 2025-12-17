@@ -490,6 +490,31 @@ public static partial class NativeMethods
         nuint errorBufferSize);
 
     [LibraryImport(LibName, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial IntPtr dbento_batch_submit_job_ex(
+        HistoricalClientHandle handle,
+        string dataset,
+        string schema,
+        [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPUTF8Str)]
+        string[] symbols,
+        nuint symbolCount,
+        long startTimeNs,
+        long endTimeNs,
+        int encoding,
+        int compression,
+        [MarshalAs(UnmanagedType.I1)] bool prettyPx,
+        [MarshalAs(UnmanagedType.I1)] bool prettyTs,
+        [MarshalAs(UnmanagedType.I1)] bool mapSymbols,
+        [MarshalAs(UnmanagedType.I1)] bool splitSymbols,
+        int splitDuration,
+        ulong splitSize,
+        int delivery,
+        int stypeIn,
+        int stypeOut,
+        ulong limit,
+        byte[]? errorBuffer,
+        nuint errorBufferSize);
+
+    [LibraryImport(LibName, StringMarshalling = StringMarshalling.Utf8)]
     public static partial IntPtr dbento_batch_list_jobs(
         HistoricalClientHandle handle,
         byte[]? errorBuffer,

@@ -1017,6 +1017,56 @@ DATABENTO_API const char* dbento_batch_submit_job(
 );
 
 /**
+ * Submit a batch job (extended version with all parameters)
+ * WARNING: This will incur a cost
+ * @param handle Historical client handle
+ * @param dataset Dataset name
+ * @param schema Schema type string
+ * @param symbols Array of symbol strings
+ * @param symbol_count Number of symbols
+ * @param start_time_ns Start time (nanoseconds since epoch)
+ * @param end_time_ns End time (nanoseconds since epoch)
+ * @param encoding Encoding type (0=Dbn, 1=Csv, 2=Json)
+ * @param compression Compression type (0=None, 1=Zstd)
+ * @param pretty_px Format prices with decimal point
+ * @param pretty_ts Format timestamps as ISO 8601
+ * @param map_symbols Append raw symbol to each record
+ * @param split_symbols Split files by symbol
+ * @param split_duration Split duration (0=Day, 1=Week, 2=Month, 3=None)
+ * @param split_size Split size in bytes (0 for no size-based splitting)
+ * @param delivery Delivery method (0=Download)
+ * @param stype_in Input symbology type
+ * @param stype_out Output symbology type
+ * @param limit Maximum number of records (0 for no limit)
+ * @param error_buffer Buffer for error messages
+ * @param error_buffer_size Size of error buffer
+ * @return JSON string describing the batch job, or NULL on failure (must be freed with dbento_free_string)
+ */
+DATABENTO_API const char* dbento_batch_submit_job_ex(
+    DbentoHistoricalClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    int64_t start_time_ns,
+    int64_t end_time_ns,
+    int32_t encoding,
+    int32_t compression,
+    bool pretty_px,
+    bool pretty_ts,
+    bool map_symbols,
+    bool split_symbols,
+    int32_t split_duration,
+    uint64_t split_size,
+    int32_t delivery,
+    int32_t stype_in,
+    int32_t stype_out,
+    uint64_t limit,
+    char* error_buffer,
+    size_t error_buffer_size
+);
+
+/**
  * List batch jobs
  * @param handle Historical client handle
  * @param error_buffer Buffer for error messages
