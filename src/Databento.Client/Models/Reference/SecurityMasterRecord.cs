@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Databento.Client.Models.Reference;
@@ -195,9 +196,9 @@ public sealed class SecurityMasterRecord
     [JsonPropertyName("vote_per_sec")]
     public decimal? VotePerSec { get; set; }
 
-    /// <summary>Shares outstanding</summary>
+    /// <summary>Shares outstanding. Note: API may return this as either a number or string. Use ValueKind to check type.</summary>
     [JsonPropertyName("shares_outstanding")]
-    public string? SharesOutstanding { get; set; }
+    public JsonElement? SharesOutstanding { get; set; }
 
     /// <summary>Shares outstanding date</summary>
     [JsonPropertyName("shares_outstanding_date")]
