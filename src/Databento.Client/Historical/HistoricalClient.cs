@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -1572,6 +1573,61 @@ public sealed class HistoricalClient : IHistoricalClient
                 NativeMethods.dbento_free_string(pathPtr);
             }
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Download all files from a batch job, optionally keeping the zip archive
+    /// </summary>
+    public async Task<IReadOnlyList<string>> BatchDownloadAsync(
+        string outputDir,
+        string jobId,
+        bool keepZip,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(Interlocked.CompareExchange(ref _disposeState, 0, 0) != 0, this);
+
+        if (!keepZip)
+        {
+            // Delegate to the standard download method
+            return await BatchDownloadAsync(outputDir, jobId, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Download files normally first
+        var downloadedFiles = await BatchDownloadAsync(outputDir, jobId, cancellationToken).ConfigureAwait(false);
+
+        if (downloadedFiles.Count == 0)
+        {
+            return downloadedFiles;
+        }
+
+        // Create zip archive from downloaded files
+        var zipPath = Path.Combine(outputDir, $"{jobId}.zip");
+
+        await Task.Run(() =>
+        {
+            using var zipArchive = ZipFile.Open(zipPath, ZipArchiveMode.Create);
+            foreach (var filePath in downloadedFiles)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var entryName = Path.GetFileName(filePath);
+                zipArchive.CreateEntryFromFile(filePath, entryName, CompressionLevel.Optimal);
+            }
+        }, cancellationToken).ConfigureAwait(false);
+
+        // Delete the extracted files, keeping only the zip
+        foreach (var filePath in downloadedFiles)
+        {
+            try
+            {
+                File.Delete(filePath);
+            }
+            catch
+            {
+                // Ignore deletion errors - zip was still created successfully
+            }
+        }
+
+        return new List<string> { zipPath };
     }
 
     /// <summary>

@@ -1130,6 +1130,24 @@ DATABENTO_API const char* dbento_batch_download_file(
     size_t error_buffer_size
 );
 
+/**
+ * Download all files from a batch job as a single zip archive (keep_zip mode)
+ * This preserves the zip file instead of extracting its contents.
+ * @param handle Historical client handle
+ * @param output_dir Output directory path
+ * @param job_id Job identifier
+ * @param error_buffer Buffer for error messages
+ * @param error_buffer_size Size of error buffer
+ * @return Path to downloaded zip file as string, or NULL on failure (must be freed with dbento_free_string)
+ */
+DATABENTO_API const char* dbento_batch_download_all_keep_zip(
+    DbentoHistoricalClientHandle handle,
+    const char* output_dir,
+    const char* job_id,
+    char* error_buffer,
+    size_t error_buffer_size
+);
+
 // ============================================================================
 // DBN File Reader API
 // ============================================================================

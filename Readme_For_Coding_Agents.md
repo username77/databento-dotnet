@@ -498,6 +498,16 @@ Task<IReadOnlyList<string>> ListDatasetsAsync(string? venue = null,
 Task<decimal> GetCostAsync(string dataset, Schema schema,
     DateTimeOffset startTime, DateTimeOffset endTime,
     IEnumerable<string> symbols, CancellationToken ct = default);
+
+// Batch Download Methods
+Task<IReadOnlyList<string>> BatchDownloadAsync(string outputDir, string jobId,
+    CancellationToken ct = default);  // Downloads and extracts all files
+
+Task<string> BatchDownloadAsync(string outputDir, string jobId, string filename,
+    CancellationToken ct = default);  // Downloads a specific file
+
+Task<IReadOnlyList<string>> BatchDownloadAsync(string outputDir, string jobId,
+    bool keepZip, CancellationToken ct = default);  // keepZip=true creates a zip archive
 ```
 
 ### ReferenceClient

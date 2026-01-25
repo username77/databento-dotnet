@@ -544,6 +544,14 @@ public static partial class NativeMethods
         byte[]? errorBuffer,
         nuint errorBufferSize);
 
+    [LibraryImport(LibName, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial IntPtr dbento_batch_download_all_keep_zip(
+        HistoricalClientHandle handle,
+        string outputDir,
+        string jobId,
+        byte[]? errorBuffer,
+        nuint errorBufferSize);
+
     // ========================================================================
     // DBN File Reader API
     // ========================================================================

@@ -149,6 +149,7 @@ var client = new HistoricalClientBuilder()
 | `BatchListFilesAsync` | `jobId`: string<br>`cancellationToken`: CancellationToken = default | `Task<IReadOnlyList<BatchFileDesc>>` | List files for batch job |
 | `BatchDownloadAsync` | `outputDir`: string<br>`jobId`: string<br>`cancellationToken`: CancellationToken = default | `Task<IReadOnlyList<string>>` | Download all files from job |
 | `BatchDownloadAsync` (single) | `outputDir`: string<br>`jobId`: string<br>`filename`: string<br>`cancellationToken`: CancellationToken = default | `Task<string>` | Download specific file |
+| `BatchDownloadAsync` (keepZip) | `outputDir`: string<br>`jobId`: string<br>`keepZip`: bool<br>`cancellationToken`: CancellationToken = default | `Task<IReadOnlyList<string>>` | Download files; if keepZip=true, creates a zip archive and returns path to zip |
 
 #### 2.1.6 Symbology Resolution Methods
 

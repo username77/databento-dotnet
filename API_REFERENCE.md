@@ -1,6 +1,6 @@
 # databento-dotnet API Reference
 
-**Version:** v4.3.0 | [Detailed API Classification](API_Classification.md)
+**Version:** v5.2.0 | [Detailed API Classification](API_Classification.md)
 
 ---
 
@@ -185,6 +185,20 @@ var resolution = await client.SymbologyResolveAsync(
 foreach (var (symbol, intervals) in resolution.Mappings)
     foreach (var interval in intervals)
         Console.WriteLine($"{symbol} -> {interval.Symbol}");
+```
+
+### Batch Download
+
+```csharp
+// Download and extract all files
+var files = await client.BatchDownloadAsync(outputDir, jobId);
+
+// Download a specific file
+var filePath = await client.BatchDownloadAsync(outputDir, jobId, "data.dbn.zst");
+
+// Download and create a zip archive (keepZip=true)
+var paths = await client.BatchDownloadAsync(outputDir, jobId, keepZip: true);
+var zipPath = paths[0];  // Returns path to {jobId}.zip
 ```
 
 ---

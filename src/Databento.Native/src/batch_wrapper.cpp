@@ -413,3 +413,56 @@ DATABENTO_API const char* dbento_batch_download_file(
         return nullptr;
     }
 }
+
+DATABENTO_API const char* dbento_batch_download_all_keep_zip(
+    DbentoHistoricalClientHandle handle,
+    const char* output_dir,
+    const char* job_id,
+    char* error_buffer,
+    size_t error_buffer_size)
+{
+    try {
+        databento_native::ValidationError validation_error;
+        auto* wrapper = databento_native::ValidateAndCast<HistoricalClientWrapper>(
+            handle, databento_native::HandleType::HistoricalClient, &validation_error);
+        if (!wrapper || !wrapper->client) {
+            SafeStrCopy(error_buffer, error_buffer_size,
+                wrapper ? "Client not initialized" : databento_native::GetValidationErrorMessage(validation_error));
+            return nullptr;
+        }
+
+        // Validate parameters
+        ValidateNonEmptyString("output_dir", output_dir);
+        ValidateNonEmptyString("job_id", job_id);
+
+        // Get list of files for this job
+        std::vector<db::BatchFileDesc> files = wrapper->client->BatchListFiles(job_id);
+
+        // Find the .zip file
+        std::string zip_filename;
+        for (const auto& file : files) {
+            if (file.filename.size() >= 4 &&
+                file.filename.substr(file.filename.size() - 4) == ".zip") {
+                zip_filename = file.filename;
+                break;
+            }
+        }
+
+        if (zip_filename.empty()) {
+            SafeStrCopy(error_buffer, error_buffer_size,
+                "No zip file found in batch job files. The job may not have been created with zip packaging.");
+            return nullptr;
+        }
+
+        // Download just the zip file
+        std::filesystem::path downloaded_path =
+            wrapper->client->BatchDownload(std::filesystem::path{output_dir}, job_id, zip_filename);
+
+        std::string path_str = downloaded_path.string();
+        return AllocateString(path_str);
+    }
+    catch (const std::exception& e) {
+        SafeStrCopy(error_buffer, error_buffer_size, e.what());
+        return nullptr;
+    }
+}

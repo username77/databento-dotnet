@@ -396,6 +396,34 @@ public interface IHistoricalClient : IAsyncDisposable
         string filename,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Download all files from a batch job, optionally keeping the zip archive
+    /// </summary>
+    /// <param name="outputDir">Output directory path</param>
+    /// <param name="jobId">Batch job identifier</param>
+    /// <param name="keepZip">If true, downloads and preserves the zip archive instead of extracting files</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>
+    /// If keepZip is true, returns a single-element list containing the path to the downloaded zip file.
+    /// If keepZip is false, returns a list of all extracted file paths.
+    /// </returns>
+    /// <remarks>
+    /// The keepZip=true option is only supported by <see cref="HistoricalClient"/>.
+    /// Other implementations will throw <see cref="NotSupportedException"/> when keepZip is true.
+    /// </remarks>
+    Task<IReadOnlyList<string>> BatchDownloadAsync(
+        string outputDir,
+        string jobId,
+        bool keepZip,
+        CancellationToken cancellationToken = default)
+    {
+        if (!keepZip)
+            return BatchDownloadAsync(outputDir, jobId, cancellationToken);
+
+        throw new NotSupportedException(
+            "BatchDownloadAsync with keepZip=true is only supported by HistoricalClient");
+    }
+
     // ========================================================================
     // Symbology API Methods
     // ========================================================================
