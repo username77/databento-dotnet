@@ -94,3 +94,6 @@ production_tests/
 *.nupkg
 *.snupkg
 nupkg/
+
+# Data files
+*.dbn
