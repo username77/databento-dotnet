@@ -9,7 +9,7 @@
 
     <!-- Package Information -->
     <PackageId>Databento.Client</PackageId>
-    <Version>5.2.0</Version>
+    <Version>5.2.1</Version>
     <Authors>Alparse</Authors>
     <Company>Databento</Company>
     <Product>databento-dotnet</Product>
@@ -20,7 +20,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/Alparse/databento-dotnet</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>v5.2.0: Add keepZip option for BatchDownloadAsync - creates a local zip archive of downloaded files (Issue #15)</PackageReleaseNotes>
+    <PackageReleaseNotes>v5.2.1: Remove hardcoded local paths and CMake build artifacts from source control (Issue #16)</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
     <!-- XML Documentation -->

@@ -40,7 +40,8 @@ if (!$cmake) {
 }
 
 # Check for vcpkg toolchain
-$vcpkgToolchain = "C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
+$vcpkgRoot = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT } else { "C:\vcpkg" }
+$vcpkgToolchain = Join-Path $vcpkgRoot "scripts\buildsystems\vcpkg.cmake"
 $cmakeArgs = @("-S", $nativeDir, "-B", ".", "-DCMAKE_BUILD_TYPE=$Configuration")
 if (Test-Path $vcpkgToolchain) {
     Write-Host "Using vcpkg toolchain: $vcpkgToolchain" -ForegroundColor Yellow

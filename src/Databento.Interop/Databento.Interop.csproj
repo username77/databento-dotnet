@@ -36,24 +36,24 @@
       <Link>%(Filename)%(Extension)</Link>
     </None>
 
-    <!-- Copy vcpkg dependencies (Windows only) -->
-    <None Include="C:\vcpkg\installed\x64-windows\bin\libcrypto-3-x64.dll" Condition="Exists('C:\vcpkg\installed\x64-windows\bin\libcrypto-3-x64.dll')">
+    <!-- Copy vcpkg dependencies (Windows only, requires VCPKG_ROOT environment variable) -->
+    <None Include="$(VCPKG_ROOT)\installed\x64-windows\bin\libcrypto-3-x64.dll" Condition="'$(VCPKG_ROOT)' != '' AND Exists('$(VCPKG_ROOT)\installed\x64-windows\bin\libcrypto-3-x64.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>libcrypto-3-x64.dll</Link>
     </None>
-    <None Include="C:\vcpkg\installed\x64-windows\bin\libssl-3-x64.dll" Condition="Exists('C:\vcpkg\installed\x64-windows\bin\libssl-3-x64.dll')">
+    <None Include="$(VCPKG_ROOT)\installed\x64-windows\bin\libssl-3-x64.dll" Condition="'$(VCPKG_ROOT)' != '' AND Exists('$(VCPKG_ROOT)\installed\x64-windows\bin\libssl-3-x64.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>libssl-3-x64.dll</Link>
     </None>
-    <None Include="C:\vcpkg\installed\x64-windows\bin\zstd.dll" Condition="Exists('C:\vcpkg\installed\x64-windows\bin\zstd.dll')">
+    <None Include="$(VCPKG_ROOT)\installed\x64-windows\bin\zstd.dll" Condition="'$(VCPKG_ROOT)' != '' AND Exists('$(VCPKG_ROOT)\installed\x64-windows\bin\zstd.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>zstd.dll</Link>
     </None>
-    <None Include="C:\vcpkg\installed\x64-windows\bin\zlib1.dll" Condition="Exists('C:\vcpkg\installed\x64-windows\bin\zlib1.dll')">
+    <None Include="$(VCPKG_ROOT)\installed\x64-windows\bin\zlib1.dll" Condition="'$(VCPKG_ROOT)' != '' AND Exists('$(VCPKG_ROOT)\installed\x64-windows\bin\zlib1.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>zlib1.dll</Link>
     </None>
-    <None Include="C:\vcpkg\installed\x64-windows\bin\legacy.dll" Condition="Exists('C:\vcpkg\installed\x64-windows\bin\legacy.dll')">
+    <None Include="$(VCPKG_ROOT)\installed\x64-windows\bin\legacy.dll" Condition="'$(VCPKG_ROOT)' != '' AND Exists('$(VCPKG_ROOT)\installed\x64-windows\bin\legacy.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>legacy.dll</Link>
     </None>

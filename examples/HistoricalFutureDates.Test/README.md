@@ -11,14 +11,14 @@ Requesting historical data for future dates (e.g., May-Nov 2025) caused AccessVi
 ### Option 1: Command Line (Quickest)
 
 ```bash
-cd C:\Users\serha\source\repos\databento-dotnet\examples\HistoricalFutureDates.Test
+cd <repo-root>/examples/HistoricalFutureDates.Test
 dotnet run
 ```
 
 ### Option 2: Visual Studio
 
 1. **Open Solution**:
-   - Open `C:\Users\serha\source\repos\databento-dotnet\databento-dotnet.sln` in Visual Studio 2022
+   - Open `databento-dotnet.sln` in the repository root with Visual Studio 2022
 
 2. **Set as Startup Project**:
    - Right-click `HistoricalFutureDates.Test` in Solution Explorer
@@ -34,7 +34,7 @@ dotnet run
 ### Option 3: VS Developer Command Prompt
 
 ```cmd
-cd C:\Users\serha\source\repos\databento-dotnet
+cd <repo-root>
 msbuild examples\HistoricalFutureDates.Test\HistoricalFutureDates.Test.csproj
 examples\HistoricalFutureDates.Test\bin\Debug\net8.0\HistoricalFutureDates.Test.exe
 ```

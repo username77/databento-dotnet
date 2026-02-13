@@ -20,6 +20,7 @@ Makefile
 *.vcxproj.filters
 *.vcxproj.user
 *.sln
+src/Databento.Native/build/
 
 # Visual Studio
 .vs/
