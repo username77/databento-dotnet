@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Databento.Interop.Native;
 
@@ -42,6 +43,7 @@ internal static class NativeLibraryLoader
 
         foreach (var dep in dependencies)
         {
+            bool loaded = false;
             foreach (var location in locations)
             {
                 var dllPath = Path.Combine(location, dep);
@@ -51,14 +53,22 @@ internal static class NativeLibraryLoader
                     {
                         if (NativeLibrary.TryLoad(dllPath, out var handle))
                         {
+                            loaded = true;
                             break;
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Ignore and try next location
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[Databento] Failed to preload dependency '{dep}' from '{dllPath}': {ex.GetType().Name}: {ex.Message}");
                     }
                 }
+            }
+
+            if (!loaded)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Databento] Could not preload dependency '{dep}' from any search location.");
             }
         }
     }
@@ -73,12 +83,24 @@ internal static class NativeLibraryLoader
 
         // Try to load from multiple locations
         var locations = GetSearchLocations().ToList();
+        var diagnostics = new StringBuilder();
+        diagnostics.AppendLine($"Failed to load native library '{libraryName}'.");
+        diagnostics.AppendLine();
+        diagnostics.AppendLine($"OS: {RuntimeInformation.OSDescription}");
+        diagnostics.AppendLine($"Architecture: {RuntimeInformation.ProcessArchitecture}");
+        diagnostics.AppendLine($"Framework: {RuntimeInformation.FrameworkDescription}");
+        diagnostics.AppendLine($"RID: {GetRuntimeIdentifier() ?? "(unknown)"}");
+        diagnostics.AppendLine();
+        diagnostics.AppendLine("Search paths:");
+
+        var platformName = GetPlatformLibraryName(libraryName);
 
         foreach (var location in locations)
         {
-            var dllPath = Path.Combine(location, GetPlatformLibraryName(libraryName));
+            var dllPath = Path.Combine(location, platformName);
+            var exists = File.Exists(dllPath);
 
-            if (File.Exists(dllPath))
+            if (exists)
             {
                 try
                 {
@@ -86,16 +108,42 @@ internal static class NativeLibraryLoader
                     {
                         return handle;
                     }
+                    diagnostics.AppendLine($"  [EXISTS BUT FAILED TO LOAD] {dllPath}");
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Ignore and try next location
+                    diagnostics.AppendLine($"  [LOAD ERROR: {ex.GetType().Name}] {dllPath}");
                 }
+            }
+            else
+            {
+                diagnostics.AppendLine($"  [NOT FOUND] {dllPath}");
             }
         }
 
-        // Fallback to default resolution
-        return IntPtr.Zero;
+        // Check dependency status
+        diagnostics.AppendLine();
+        diagnostics.AppendLine("Dependency status:");
+        var dependencies = new[] { "zlib1.dll", "zstd.dll", "legacy.dll", "libcrypto-3-x64.dll", "libssl-3-x64.dll" };
+        foreach (var dep in dependencies)
+        {
+            bool found = false;
+            foreach (var location in locations)
+            {
+                if (File.Exists(Path.Combine(location, dep)))
+                {
+                    diagnostics.AppendLine($"  [FOUND] {dep} in {location}");
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                diagnostics.AppendLine($"  [NOT FOUND] {dep}");
+            }
+        }
+
+        throw new DllNotFoundException(diagnostics.ToString());
     }
 
     private static string GetPlatformLibraryName(string libraryName)

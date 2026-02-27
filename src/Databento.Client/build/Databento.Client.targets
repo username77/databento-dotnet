@@ -1,22 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <!-- Copy native binaries to output directory -->
-  <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)..\runtimes\**\*.*">
-      <Link>%(RecursiveDir)%(FileName)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Visible>false</Visible>
-    </None>
-  </ItemGroup>
+  <!--
+    Copy native DLLs to output directory on Build (Windows only).
+    Uses explicit Copy tasks instead of <None CopyToOutputDirectory> for reliable
+    behavior from NuGet packages (both direct and transitive references).
+  -->
+  <Target Name="DatabentoNativeCopyToOutput"
+          AfterTargets="Build"
+          Condition="$([MSBuild]::IsOSPlatform('Windows'))">
 
-  <!-- Ensure native DLLs are in the root of output directory for easier loading -->
-  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' OR ('$(RuntimeIdentifier)' == '' AND $([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows))))">
-    <None Include="$(MSBuildThisFileDirectory)..\runtimes\win-x64\native\*.dll">
-      <Link>%(FileName)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Visible>false</Visible>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+      <_DatabentoNativeDlls Include="$(MSBuildThisFileDirectory)..\runtimes\win-x64\native\*.dll" />
+    </ItemGroup>
+
+    <!-- Copy to $(OutDir) — the primary build output directory -->
+    <Copy SourceFiles="@(_DatabentoNativeDlls)"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true" />
+
+    <!-- Copy to $(OutputPath) when it differs from $(OutDir) -->
+    <Copy SourceFiles="@(_DatabentoNativeDlls)"
+          DestinationFolder="$(OutputPath)"
+          SkipUnchangedFiles="true"
+          Condition="'$(OutputPath)' != '' AND '$(OutputPath)' != '$(OutDir)'" />
+  </Target>
+
+  <!--
+    Copy native DLLs into the publish output directory.
+    Runs after Publish so that dotnet publish deployments include the native binaries.
+  -->
+  <Target Name="DatabentoNativeCopyToPublish"
+          AfterTargets="Publish"
+          Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+
+    <ItemGroup>
+      <_DatabentoNativePublishDlls Include="$(MSBuildThisFileDirectory)..\runtimes\win-x64\native\*.dll" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_DatabentoNativePublishDlls)"
+          DestinationFolder="$(PublishDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

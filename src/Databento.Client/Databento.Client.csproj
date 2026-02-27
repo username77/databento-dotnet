@@ -9,7 +9,7 @@
 
     <!-- Package Information -->
     <PackageId>Databento.Client</PackageId>
-    <Version>5.2.1</Version>
+    <Version>5.2.2</Version>
     <Authors>Alparse</Authors>
     <Company>Databento</Company>
     <Product>databento-dotnet</Product>
@@ -20,7 +20,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/Alparse/databento-dotnet</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>v5.2.1: Remove hardcoded local paths and CMake build artifacts from source control (Issue #16)</PackageReleaseNotes>
+    <PackageReleaseNotes>v5.2.2: Fix DllNotFoundException for native libraries in NuGet package consumers (Issue #17)</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
     <!-- XML Documentation -->
@@ -57,6 +57,7 @@
 
     <!-- Include build targets to copy native DLLs -->
     <None Include="build\Databento.Client.targets" Pack="true" PackagePath="build" />
+    <None Include="build\Databento.Client.targets" Pack="true" PackagePath="buildTransitive" />
   </ItemGroup>
 
 </Project>
