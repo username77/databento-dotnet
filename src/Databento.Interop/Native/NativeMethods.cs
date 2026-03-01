@@ -113,6 +113,43 @@ public static partial class NativeMethods
         byte[]? errorBuffer,
         nuint errorBufferSize);
 
+    [LibraryImport(LibName, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int dbento_live_subscribe_ex(
+        LiveClientHandle handle,
+        string dataset,
+        string schema,
+        [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPUTF8Str)]
+        string[] symbols,
+        nuint symbolCount,
+        string stypeIn,
+        byte[]? errorBuffer,
+        nuint errorBufferSize);
+
+    [LibraryImport(LibName, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int dbento_live_subscribe_with_replay_ex(
+        LiveClientHandle handle,
+        string dataset,
+        string schema,
+        [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPUTF8Str)]
+        string[] symbols,
+        nuint symbolCount,
+        long startTimeNs,
+        string stypeIn,
+        byte[]? errorBuffer,
+        nuint errorBufferSize);
+
+    [LibraryImport(LibName, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int dbento_live_subscribe_with_snapshot_ex(
+        LiveClientHandle handle,
+        string dataset,
+        string schema,
+        [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPUTF8Str)]
+        string[] symbols,
+        nuint symbolCount,
+        string stypeIn,
+        byte[]? errorBuffer,
+        nuint errorBufferSize);
+
     [LibraryImport(LibName)]
     public static partial int dbento_live_get_connection_state(LiveClientHandle handle);
 
@@ -161,6 +198,43 @@ public static partial class NativeMethods
         [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPUTF8Str)]
         string[] symbols,
         nuint symbolCount,
+        byte[]? errorBuffer,
+        nuint errorBufferSize);
+
+    [LibraryImport(LibName, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int dbento_live_blocking_subscribe_ex(
+        LiveClientHandle handle,
+        string dataset,
+        string schema,
+        [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPUTF8Str)]
+        string[] symbols,
+        nuint symbolCount,
+        string stypeIn,
+        byte[]? errorBuffer,
+        nuint errorBufferSize);
+
+    [LibraryImport(LibName, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int dbento_live_blocking_subscribe_with_replay_ex(
+        LiveClientHandle handle,
+        string dataset,
+        string schema,
+        [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPUTF8Str)]
+        string[] symbols,
+        nuint symbolCount,
+        long startTimeNs,
+        string stypeIn,
+        byte[]? errorBuffer,
+        nuint errorBufferSize);
+
+    [LibraryImport(LibName, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int dbento_live_blocking_subscribe_with_snapshot_ex(
+        LiveClientHandle handle,
+        string dataset,
+        string schema,
+        [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPUTF8Str)]
+        string[] symbols,
+        nuint symbolCount,
+        string stypeIn,
         byte[]? errorBuffer,
         nuint errorBufferSize);
 

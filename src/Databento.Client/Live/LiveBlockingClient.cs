@@ -21,7 +21,7 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
     private readonly bool _sendTsOut;
     private readonly VersionUpgradePolicy _upgradePolicy;
     private readonly TimeSpan _heartbeatInterval;
-    private readonly List<(string dataset, Schema schema, string[] symbols, bool withSnapshot, DateTimeOffset? startTime)> _subscriptions = new();
+    private readonly List<(string dataset, Schema schema, string[] symbols, bool withSnapshot, DateTimeOffset? startTime, SType stypeIn)> _subscriptions = new();
     private bool _isDisposed;
     private bool _isStarted;
 
@@ -55,7 +55,7 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
         {
             Dataset = s.dataset,
             Schema = s.schema,
-            STypeIn = SType.RawSymbol,
+            STypeIn = s.stypeIn,
             Symbols = s.symbols,
             StartTime = s.startTime,
             WithSnapshot = s.withSnapshot
@@ -101,10 +101,21 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
     }
 
     /// <inheritdoc/>
+    public Task SubscribeAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        CancellationToken cancellationToken = default)
+    {
+        return SubscribeAsync(dataset, schema, symbols, SType.RawSymbol, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task SubscribeAsync(
         string dataset,
         Schema schema,
         IEnumerable<string> symbols,
+        SType stypeIn,
         CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
@@ -113,15 +124,18 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
         if (symbolArray.Length == 0)
             throw new ArgumentException("Symbols array cannot be empty", nameof(symbols));
 
+        var stypeInStr = stypeIn.ToStypeString();
+
         await Task.Run(() =>
         {
             var errorBuffer = new byte[4096];
-            var result = NativeMethods.dbento_live_blocking_subscribe(
+            var result = NativeMethods.dbento_live_blocking_subscribe_ex(
                 _handle,
                 dataset,
                 schema.ToSchemaString(),
                 symbolArray,
                 (nuint)symbolArray.Length,
+                stypeInStr,
                 errorBuffer,
                 (nuint)errorBuffer.Length);
 
@@ -131,12 +145,23 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
                 throw new DbentoException($"Subscribe failed: {error}");
             }
 
-            _logger.LogInformation("Subscribed to {Dataset} {Schema} with {Count} symbols",
-                dataset, schema, symbolArray.Length);
+            _logger.LogInformation("Subscribed to {Dataset} {Schema} stypeIn={StypeIn} with {Count} symbols",
+                dataset, schema, stypeIn, symbolArray.Length);
 
             // Track subscription
-            _subscriptions.Add((dataset, schema, symbolArray, withSnapshot: false, startTime: null));
+            _subscriptions.Add((dataset, schema, symbolArray, withSnapshot: false, startTime: null, stypeIn));
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public Task SubscribeWithReplayAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        DateTimeOffset start,
+        CancellationToken cancellationToken = default)
+    {
+        return SubscribeWithReplayAsync(dataset, schema, symbols, start, SType.RawSymbol, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -145,6 +170,7 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
         Schema schema,
         IEnumerable<string> symbols,
         DateTimeOffset start,
+        SType stypeIn,
         CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
@@ -154,17 +180,19 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
             throw new ArgumentException("Symbols array cannot be empty", nameof(symbols));
 
         var startTimeNs = start.ToUnixTimeMilliseconds() * 1_000_000;
+        var stypeInStr = stypeIn.ToStypeString();
 
         await Task.Run(() =>
         {
             var errorBuffer = new byte[4096];
-            var result = NativeMethods.dbento_live_blocking_subscribe_with_replay(
+            var result = NativeMethods.dbento_live_blocking_subscribe_with_replay_ex(
                 _handle,
                 dataset,
                 schema.ToSchemaString(),
                 symbolArray,
                 (nuint)symbolArray.Length,
                 startTimeNs,
+                stypeInStr,
                 errorBuffer,
                 (nuint)errorBuffer.Length);
 
@@ -174,12 +202,22 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
                 throw new DbentoException($"SubscribeWithReplay failed: {error}");
             }
 
-            _logger.LogInformation("Subscribed with replay from {Start} to {Dataset} {Schema}",
-                start, dataset, schema);
+            _logger.LogInformation("Subscribed with replay from {Start} to {Dataset} {Schema} stypeIn={StypeIn}",
+                start, dataset, schema, stypeIn);
 
             // Track subscription
-            _subscriptions.Add((dataset, schema, symbolArray, withSnapshot: false, startTime: start));
+            _subscriptions.Add((dataset, schema, symbolArray, withSnapshot: false, startTime: start, stypeIn));
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public Task SubscribeWithSnapshotAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        CancellationToken cancellationToken = default)
+    {
+        return SubscribeWithSnapshotAsync(dataset, schema, symbols, SType.RawSymbol, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -187,6 +225,7 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
         string dataset,
         Schema schema,
         IEnumerable<string> symbols,
+        SType stypeIn,
         CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
@@ -195,15 +234,18 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
         if (symbolArray.Length == 0)
             throw new ArgumentException("Symbols array cannot be empty", nameof(symbols));
 
+        var stypeInStr = stypeIn.ToStypeString();
+
         await Task.Run(() =>
         {
             var errorBuffer = new byte[4096];
-            var result = NativeMethods.dbento_live_blocking_subscribe_with_snapshot(
+            var result = NativeMethods.dbento_live_blocking_subscribe_with_snapshot_ex(
                 _handle,
                 dataset,
                 schema.ToSchemaString(),
                 symbolArray,
                 (nuint)symbolArray.Length,
+                stypeInStr,
                 errorBuffer,
                 (nuint)errorBuffer.Length);
 
@@ -213,11 +255,11 @@ public sealed class LiveBlockingClient : ILiveBlockingClient
                 throw new DbentoException($"SubscribeWithSnapshot failed: {error}");
             }
 
-            _logger.LogInformation("Subscribed with snapshot to {Dataset} {Schema}",
-                dataset, schema);
+            _logger.LogInformation("Subscribed with snapshot to {Dataset} {Schema} stypeIn={StypeIn}",
+                dataset, schema, stypeIn);
 
             // Track subscription
-            _subscriptions.Add((dataset, schema, symbolArray, withSnapshot: true, startTime: null));
+            _subscriptions.Add((dataset, schema, symbolArray, withSnapshot: true, startTime: null, stypeIn));
         }, cancellationToken).ConfigureAwait(false);
     }
 

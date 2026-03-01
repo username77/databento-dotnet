@@ -170,15 +170,17 @@ public sealed class LiveDataSource : IDataSource
         var symbolArray = sub.Symbols.ToArray();
         byte[] errorBuffer = new byte[Utilities.Constants.ErrorBufferSize];
         int result;
+        var stypeInStr = sub.STypeIn.ToStypeString();
 
         if (sub.WithSnapshot)
         {
-            result = NativeMethods.dbento_live_subscribe_with_snapshot(
+            result = NativeMethods.dbento_live_subscribe_with_snapshot_ex(
                 _handle,
                 sub.Dataset,
                 sub.Schema.ToSchemaString(),
                 symbolArray,
                 (nuint)symbolArray.Length,
+                stypeInStr,
                 errorBuffer,
                 (nuint)errorBuffer.Length);
         }
@@ -188,24 +190,26 @@ public sealed class LiveDataSource : IDataSource
                 ? 0
                 : Utilities.DateTimeHelpers.ToUnixNanos(sub.StartTime.Value);
 
-            result = NativeMethods.dbento_live_subscribe_with_replay(
+            result = NativeMethods.dbento_live_subscribe_with_replay_ex(
                 _handle,
                 sub.Dataset,
                 sub.Schema.ToSchemaString(),
                 symbolArray,
                 (nuint)symbolArray.Length,
                 startTimeNs,
+                stypeInStr,
                 errorBuffer,
                 (nuint)errorBuffer.Length);
         }
         else
         {
-            result = NativeMethods.dbento_live_subscribe(
+            result = NativeMethods.dbento_live_subscribe_ex(
                 _handle,
                 sub.Dataset,
                 sub.Schema.ToSchemaString(),
                 symbolArray,
                 (nuint)symbolArray.Length,
+                stypeInStr,
                 errorBuffer,
                 (nuint)errorBuffer.Length);
         }

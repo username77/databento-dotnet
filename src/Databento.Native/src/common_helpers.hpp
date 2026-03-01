@@ -141,6 +141,31 @@ inline databento::Schema ParseSchema(const std::string& schema_str) {
 }
 
 /**
+ * Parse SType string to databento SType enum
+ * Centralized to ensure consistency across all wrappers
+ * @param stype_str SType string (e.g., "raw_symbol", "continuous", "smart")
+ * @return SType enum value
+ * @throws std::runtime_error if stype string is unknown
+ */
+inline databento::SType ParseSType(const std::string& stype_str) {
+    if (stype_str == "instrument_id") return databento::SType::InstrumentId;
+    if (stype_str == "raw_symbol") return databento::SType::RawSymbol;
+    if (stype_str == "smart") return databento::SType::Smart;
+    if (stype_str == "continuous") return databento::SType::Continuous;
+    if (stype_str == "parent") return databento::SType::Parent;
+    if (stype_str == "nasdaq_symbol") return databento::SType::NasdaqSymbol;
+    if (stype_str == "cms_symbol") return databento::SType::CmsSymbol;
+    if (stype_str == "isin") return databento::SType::Isin;
+    if (stype_str == "us_code") return databento::SType::UsCode;
+    if (stype_str == "bbg_comp_id") return databento::SType::BbgCompId;
+    if (stype_str == "bbg_comp_ticker") return databento::SType::BbgCompTicker;
+    if (stype_str == "figi") return databento::SType::Figi;
+    if (stype_str == "figi_ticker") return databento::SType::FigiTicker;
+
+    throw std::runtime_error("Unknown stype: " + stype_str);
+}
+
+/**
  * Convert nanoseconds since epoch to UnixNanos with validation
  * Prevents integer overflow from negative timestamps
  * @param ns Timestamp in nanoseconds since Unix epoch

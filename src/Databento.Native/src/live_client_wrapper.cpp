@@ -21,6 +21,7 @@ using databento_native::SafeStrCopy;
 using databento_native::ParseSchema;
 using databento_native::ValidateNonEmptyString;
 using databento_native::ValidateSymbolArray;
+using databento_native::ParseSType;
 
 // ============================================================================
 // Internal Wrapper Class
@@ -717,6 +718,167 @@ DATABENTO_API int dbento_live_subscribe_with_replay(
         // UnixNanos is a time_point<system_clock, duration<uint64_t, nano>>
         db::UnixNanos start_time{std::chrono::nanoseconds{start_time_ns}};
         wrapper->client->Subscribe(symbol_vec, schema_enum, db::SType::RawSymbol, start_time);
+
+        return 0;
+    }
+    catch (const std::exception& e) {
+        SafeStrCopy(error_buffer, error_buffer_size, e.what());
+        return -1;
+    }
+}
+
+// ============================================================================
+// Extended Subscribe Functions with stype_in support (Issue #20)
+// ============================================================================
+
+DATABENTO_API int dbento_live_subscribe_ex(
+    DbentoLiveClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    const char* stype_in,
+    char* error_buffer,
+    size_t error_buffer_size)
+{
+    try {
+        databento_native::ValidationError validation_error;
+        auto* wrapper = databento_native::ValidateAndCast<LiveClientWrapper>(
+            handle, databento_native::HandleType::LiveClient, &validation_error);
+        if (!wrapper) {
+            SafeStrCopy(error_buffer, error_buffer_size,
+                databento_native::GetValidationErrorMessage(validation_error));
+            return -1;
+        }
+
+        ValidateNonEmptyString("dataset", dataset);
+        ValidateNonEmptyString("schema", schema);
+        ValidateNonEmptyString("stype_in", stype_in);
+        ValidateSymbolArray(symbols, symbol_count);
+
+        wrapper->dataset = dataset;
+
+        std::vector<std::string> symbol_vec;
+        if (symbols && symbol_count > 0) {
+            for (size_t i = 0; i < symbol_count; ++i) {
+                if (symbols[i]) {
+                    symbol_vec.emplace_back(symbols[i]);
+                }
+            }
+        }
+
+        db::Schema schema_enum = ParseSchema(schema);
+        db::SType stype_enum = ParseSType(stype_in);
+
+        wrapper->EnsureClientCreated();
+        wrapper->client->Subscribe(symbol_vec, schema_enum, stype_enum);
+
+        return 0;
+    }
+    catch (const std::exception& e) {
+        SafeStrCopy(error_buffer, error_buffer_size, e.what());
+        return -1;
+    }
+}
+
+DATABENTO_API int dbento_live_subscribe_with_replay_ex(
+    DbentoLiveClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    int64_t start_time_ns,
+    const char* stype_in,
+    char* error_buffer,
+    size_t error_buffer_size)
+{
+    try {
+        databento_native::ValidationError validation_error;
+        auto* wrapper = databento_native::ValidateAndCast<LiveClientWrapper>(
+            handle, databento_native::HandleType::LiveClient, &validation_error);
+        if (!wrapper) {
+            SafeStrCopy(error_buffer, error_buffer_size,
+                databento_native::GetValidationErrorMessage(validation_error));
+            return -1;
+        }
+
+        ValidateNonEmptyString("dataset", dataset);
+        ValidateNonEmptyString("schema", schema);
+        ValidateNonEmptyString("stype_in", stype_in);
+        ValidateSymbolArray(symbols, symbol_count);
+
+        if (wrapper->dataset.empty()) {
+            wrapper->dataset = dataset;
+        }
+
+        std::vector<std::string> symbol_vec;
+        if (symbols && symbol_count > 0) {
+            for (size_t i = 0; i < symbol_count; ++i) {
+                if (symbols[i]) {
+                    symbol_vec.emplace_back(symbols[i]);
+                }
+            }
+        }
+
+        db::Schema schema_enum = ParseSchema(schema);
+        db::SType stype_enum = ParseSType(stype_in);
+
+        wrapper->EnsureClientCreated();
+
+        db::UnixNanos start_time{std::chrono::nanoseconds{start_time_ns}};
+        wrapper->client->Subscribe(symbol_vec, schema_enum, stype_enum, start_time);
+
+        return 0;
+    }
+    catch (const std::exception& e) {
+        SafeStrCopy(error_buffer, error_buffer_size, e.what());
+        return -1;
+    }
+}
+
+DATABENTO_API int dbento_live_subscribe_with_snapshot_ex(
+    DbentoLiveClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    const char* stype_in,
+    char* error_buffer,
+    size_t error_buffer_size)
+{
+    try {
+        databento_native::ValidationError validation_error;
+        auto* wrapper = databento_native::ValidateAndCast<LiveClientWrapper>(
+            handle, databento_native::HandleType::LiveClient, &validation_error);
+        if (!wrapper) {
+            SafeStrCopy(error_buffer, error_buffer_size,
+                databento_native::GetValidationErrorMessage(validation_error));
+            return -1;
+        }
+
+        ValidateNonEmptyString("dataset", dataset);
+        ValidateNonEmptyString("schema", schema);
+        ValidateNonEmptyString("stype_in", stype_in);
+        ValidateSymbolArray(symbols, symbol_count);
+
+        if (wrapper->dataset.empty()) {
+            wrapper->dataset = dataset;
+        }
+
+        std::vector<std::string> symbol_vec;
+        if (symbols && symbol_count > 0) {
+            for (size_t i = 0; i < symbol_count; ++i) {
+                if (symbols[i]) {
+                    symbol_vec.emplace_back(symbols[i]);
+                }
+            }
+        }
+
+        db::Schema schema_enum = ParseSchema(schema);
+        db::SType stype_enum = ParseSType(stype_in);
+
+        wrapper->EnsureClientCreated();
+        wrapper->client->SubscribeWithSnapshot(symbol_vec, schema_enum, stype_enum);
 
         return 0;
     }

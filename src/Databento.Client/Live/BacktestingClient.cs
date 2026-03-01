@@ -94,13 +94,25 @@ public sealed class BacktestingClient : ILiveClient, IPlaybackControllable
         DateTimeOffset? startTime = null,
         CancellationToken cancellationToken = default)
     {
+        return SubscribeAsync(dataset, schema, symbols, SType.RawSymbol, startTime, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task SubscribeAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        SType stypeIn,
+        DateTimeOffset? startTime = null,
+        CancellationToken cancellationToken = default)
+    {
         ObjectDisposedException.ThrowIf(Interlocked.CompareExchange(ref _disposeState, 0, 0) != 0, this);
 
         var subscription = new LiveSubscription
         {
             Dataset = dataset,
             Schema = schema,
-            STypeIn = SType.RawSymbol,
+            STypeIn = stypeIn,
             Symbols = symbols.ToList(),
             StartTime = startTime
         };
@@ -108,7 +120,7 @@ public sealed class BacktestingClient : ILiveClient, IPlaybackControllable
         _subscriptions.Add(subscription);
         _dataSource.AddSubscription(subscription);
 
-        _logger.LogDebug("BacktestingClient: Added subscription {Dataset}/{Schema}", dataset, schema);
+        _logger.LogDebug("BacktestingClient: Added subscription {Dataset}/{Schema} stypeIn={StypeIn}", dataset, schema, stypeIn);
         return Task.CompletedTask;
     }
 
@@ -119,9 +131,20 @@ public sealed class BacktestingClient : ILiveClient, IPlaybackControllable
         IEnumerable<string> symbols,
         CancellationToken cancellationToken = default)
     {
+        return SubscribeWithSnapshotAsync(dataset, schema, symbols, SType.RawSymbol, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task SubscribeWithSnapshotAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        SType stypeIn,
+        CancellationToken cancellationToken = default)
+    {
         // Snapshots not supported in backtesting
         _logger.LogWarning("BacktestingClient: SubscribeWithSnapshotAsync called but snapshots not supported in backtesting");
-        return SubscribeAsync(dataset, schema, symbols, cancellationToken: cancellationToken);
+        return SubscribeAsync(dataset, schema, symbols, stypeIn, cancellationToken: cancellationToken);
     }
 
     /// <inheritdoc/>

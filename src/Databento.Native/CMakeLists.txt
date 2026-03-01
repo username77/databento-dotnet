@@ -6,6 +6,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # ============================================================================
+# Force Release configuration for vcpkg dependencies on Windows
+# ============================================================================
+if(WIN32 AND NOT DEFINED VCPKG_TARGET_TRIPLET)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "vcpkg triplet")
+    else()
+        set(VCPKG_TARGET_TRIPLET "x86-windows" CACHE STRING "vcpkg triplet")
+    endif()
+    message(STATUS "Using vcpkg triplet: ${VCPKG_TARGET_TRIPLET}")
+endif()
+
+# Use static MSVC runtime linkage for Release to avoid vcruntime dependencies,
+# or ensure we use the Release runtime (/MD not /MDd)
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "MSVC runtime library")
+endif()
+
+# ============================================================================
 # Fetch databento-cpp (ONLY external dependency)
 # ============================================================================
 include(FetchContent)
@@ -118,6 +136,19 @@ add_custom_command(TARGET databento_native POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:databento_native> "${DOTNET_RUNTIME_DIR}/"
     COMMENT "Copying databento_native to .NET runtime folder: ${DOTNET_RUNTIME_DIR}"
 )
+
+# Copy vcpkg-provided runtime DLLs (OpenSSL, zstd, etc.) to the .NET runtime folder
+if(WIN32 AND VCPKG_INSTALLED_DIR)
+    set(_VCPKG_BIN_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin")
+    if(EXISTS "${_VCPKG_BIN_DIR}")
+        add_custom_command(TARGET databento_native POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${_VCPKG_BIN_DIR}"
+                "${DOTNET_RUNTIME_DIR}"
+            COMMENT "Copying vcpkg runtime DLLs from ${_VCPKG_BIN_DIR} to ${DOTNET_RUNTIME_DIR}"
+        )
+    endif()
+endif()
 
 # ============================================================================
 # Installation (Optional)

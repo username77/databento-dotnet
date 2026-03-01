@@ -36,7 +36,7 @@ public sealed class LiveClient : ILiveClient
     private readonly ResilienceOptions _resilienceOptions;
     private readonly ConnectionHealthMonitor? _healthMonitor;
     // HIGH FIX: Use thread-safe collection for concurrent subscription operations
-    private readonly System.Collections.Concurrent.ConcurrentBag<(string dataset, Schema schema, string[] symbols, bool withSnapshot, DateTimeOffset? startTime)> _subscriptions;
+    private readonly System.Collections.Concurrent.ConcurrentBag<(string dataset, Schema schema, string[] symbols, bool withSnapshot, DateTimeOffset? startTime, SType stypeIn)> _subscriptions;
     private Task? _streamTask;
     // CRITICAL FIX: Use atomic int for disposal state (0=active, 1=disposing, 2=disposed)
     private int _disposeState = 0;
@@ -105,7 +105,7 @@ public sealed class LiveClient : ILiveClient
         {
             Dataset = s.dataset,
             Schema = s.schema,
-            STypeIn = SType.RawSymbol, // Default - native API uses raw symbols
+            STypeIn = s.stypeIn,
             Symbols = s.symbols,
             StartTime = s.startTime,
             WithSnapshot = s.withSnapshot
@@ -139,7 +139,7 @@ public sealed class LiveClient : ILiveClient
         _logger = logger ?? NullLogger<ILiveClient>.Instance;
         _exceptionHandler = exceptionHandler;
         _resilienceOptions = resilienceOptions ?? new ResilienceOptions();
-        _subscriptions = new System.Collections.Concurrent.ConcurrentBag<(string, Schema, string[], bool, DateTimeOffset?)>();
+        _subscriptions = new System.Collections.Concurrent.ConcurrentBag<(string, Schema, string[], bool, DateTimeOffset?, SType)>();
 
         // Initialize health monitor if auto-reconnect or heartbeat monitoring enabled
         if (_resilienceOptions.AutoReconnect || _resilienceOptions.HeartbeatTimeout > TimeSpan.Zero)
@@ -200,12 +200,27 @@ public sealed class LiveClient : ILiveClient
     }
 
     /// <summary>
-    /// Subscribe to a data stream (matches databento-cpp Subscribe overloads)
+    /// Subscribe to a data stream (matches databento-cpp Subscribe overloads).
+    /// Defaults to SType.RawSymbol for symbol type.
     /// </summary>
     public Task SubscribeAsync(
         string dataset,
         Schema schema,
         IEnumerable<string> symbols,
+        DateTimeOffset? startTime = null,
+        CancellationToken cancellationToken = default)
+    {
+        return SubscribeAsync(dataset, schema, symbols, SType.RawSymbol, startTime, cancellationToken);
+    }
+
+    /// <summary>
+    /// Subscribe to a data stream with a specified symbol type
+    /// </summary>
+    public Task SubscribeAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        SType stypeIn,
         DateTimeOffset? startTime = null,
         CancellationToken cancellationToken = default)
     {
@@ -222,6 +237,7 @@ public sealed class LiveClient : ILiveClient
         // MEDIUM FIX: Increased from 512 to 2048 for full error context
         byte[] errorBuffer = new byte[Utilities.Constants.ErrorBufferSize];
         int result;
+        var stypeInStr = stypeIn.ToStypeString();
 
         // Check if intraday replay is requested (matches databento-cpp overloads)
         if (startTime.HasValue)
@@ -232,19 +248,21 @@ public sealed class LiveClient : ILiveClient
                 : Utilities.DateTimeHelpers.ToUnixNanos(startTime.Value);
 
             _logger.LogInformation(
-                "Subscribing with replay: dataset={Dataset}, schema={Schema}, symbolCount={SymbolCount}, startTime={StartTime}",
+                "Subscribing with replay: dataset={Dataset}, schema={Schema}, stypeIn={StypeIn}, symbolCount={SymbolCount}, startTime={StartTime}",
                 dataset,
                 schema,
+                stypeIn,
                 symbolArray.Length,
                 startTime.Value);
 
-            result = NativeMethods.dbento_live_subscribe_with_replay(
+            result = NativeMethods.dbento_live_subscribe_with_replay_ex(
                 _handle,
                 dataset,
                 schema.ToSchemaString(),
                 symbolArray,
                 (nuint)symbolArray.Length,
                 startTimeNs,
+                stypeInStr,
                 errorBuffer,
                 (nuint)errorBuffer.Length);
         }
@@ -252,17 +270,19 @@ public sealed class LiveClient : ILiveClient
         {
             // Basic subscribe without replay (matches databento-cpp: Subscribe(symbols, schema, stype))
             _logger.LogInformation(
-                "Subscribing to dataset={Dataset}, schema={Schema}, symbolCount={SymbolCount}",
+                "Subscribing to dataset={Dataset}, schema={Schema}, stypeIn={StypeIn}, symbolCount={SymbolCount}",
                 dataset,
                 schema,
+                stypeIn,
                 symbolArray.Length);
 
-            result = NativeMethods.dbento_live_subscribe(
+            result = NativeMethods.dbento_live_subscribe_ex(
                 _handle,
                 dataset,
                 schema.ToSchemaString(),
                 symbolArray,
                 (nuint)symbolArray.Length,
+                stypeInStr,
                 errorBuffer,
                 (nuint)errorBuffer.Length);
         }
@@ -272,17 +292,18 @@ public sealed class LiveClient : ILiveClient
             // HIGH FIX: Use safe error string extraction
             var error = Utilities.ErrorBufferHelpers.SafeGetString(errorBuffer);
             _logger.LogError(
-                "Subscription failed with error code {ErrorCode}: {Error}. Dataset={Dataset}, Schema={Schema}",
+                "Subscription failed with error code {ErrorCode}: {Error}. Dataset={Dataset}, Schema={Schema}, StypeIn={StypeIn}",
                 result,
                 error,
                 dataset,
-                schema);
+                schema,
+                stypeIn);
             // MEDIUM FIX: Use exception factory method for proper exception type mapping
             throw DbentoException.CreateFromErrorCode($"Subscription failed: {error}", result);
         }
 
         // Track subscription for resubscription
-        _subscriptions.Add((dataset, schema, symbolArray, withSnapshot: false, startTime));
+        _subscriptions.Add((dataset, schema, symbolArray, withSnapshot: false, startTime, stypeIn));
 
         _logger.LogInformation("Subscription successful for {SymbolCount} symbols", symbolArray.Length);
 
@@ -290,12 +311,26 @@ public sealed class LiveClient : ILiveClient
     }
 
     /// <summary>
-    /// Subscribe to a data stream with initial snapshot (Phase 15)
+    /// Subscribe to a data stream with initial snapshot.
+    /// Defaults to SType.RawSymbol for symbol type.
     /// </summary>
     public Task SubscribeWithSnapshotAsync(
         string dataset,
         Schema schema,
         IEnumerable<string> symbols,
+        CancellationToken cancellationToken = default)
+    {
+        return SubscribeWithSnapshotAsync(dataset, schema, symbols, SType.RawSymbol, cancellationToken);
+    }
+
+    /// <summary>
+    /// Subscribe to a data stream with initial snapshot and a specified symbol type
+    /// </summary>
+    public Task SubscribeWithSnapshotAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        SType stypeIn,
         CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(Interlocked.CompareExchange(ref _disposeState, 0, 0) != 0, this);
@@ -309,14 +344,16 @@ public sealed class LiveClient : ILiveClient
         Utilities.ErrorBufferHelpers.ValidateSymbolArray(symbolArray);
         // MEDIUM FIX: Increased from 512 to 2048 for full error context
         byte[] errorBuffer = new byte[Utilities.Constants.ErrorBufferSize];
+        var stypeInStr = stypeIn.ToStypeString();
 
         // Use native subscribe with snapshot support
-        var result = NativeMethods.dbento_live_subscribe_with_snapshot(
+        var result = NativeMethods.dbento_live_subscribe_with_snapshot_ex(
             _handle,
             dataset,
             schema.ToSchemaString(),
             symbolArray,
             (nuint)symbolArray.Length,
+            stypeInStr,
             errorBuffer,
             (nuint)errorBuffer.Length);
 
@@ -329,7 +366,7 @@ public sealed class LiveClient : ILiveClient
         }
 
         // Track subscription for resubscription
-        _subscriptions.Add((dataset, schema, symbolArray, withSnapshot: true, startTime: null));
+        _subscriptions.Add((dataset, schema, symbolArray, withSnapshot: true, startTime: null, stypeIn));
 
         return Task.CompletedTask;
     }

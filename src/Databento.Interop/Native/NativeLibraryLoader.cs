@@ -37,8 +37,12 @@ internal static class NativeLibraryLoader
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return;
 
-        // Windows dependency order: load these before databento_native.dll
-        var dependencies = new[] { "zlib1.dll", "zstd.dll", "legacy.dll", "libcrypto-3-x64.dll", "libssl-3-x64.dll" };
+        // Windows dependency order: VC++ runtime first, then libraries
+        var dependencies = new[]
+        {
+            "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll",
+            "zstd.dll", "legacy.dll", "libcrypto-3-x64.dll", "libssl-3-x64.dll"
+        };
         var locations = GetSearchLocations().ToList();
 
         foreach (var dep in dependencies)
@@ -67,8 +71,13 @@ internal static class NativeLibraryLoader
 
             if (!loaded)
             {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[Databento] Could not preload dependency '{dep}' from any search location.");
+                // VC++ runtime DLLs may already be loaded system-wide; only warn for our bundled libs
+                if (!dep.StartsWith("msvcp", StringComparison.OrdinalIgnoreCase) &&
+                    !dep.StartsWith("vcruntime", StringComparison.OrdinalIgnoreCase))
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[Databento] Could not preload dependency '{dep}' from any search location.");
+                }
             }
         }
     }
@@ -124,8 +133,12 @@ internal static class NativeLibraryLoader
         // Check dependency status
         diagnostics.AppendLine();
         diagnostics.AppendLine("Dependency status:");
-        var dependencies = new[] { "zlib1.dll", "zstd.dll", "legacy.dll", "libcrypto-3-x64.dll", "libssl-3-x64.dll" };
-        foreach (var dep in dependencies)
+        var depCheckList = new[]
+        {
+            "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll",
+            "zstd.dll", "legacy.dll", "libcrypto-3-x64.dll", "libssl-3-x64.dll"
+        };
+        foreach (var dep in depCheckList)
         {
             bool found = false;
             foreach (var location in locations)
@@ -141,6 +154,25 @@ internal static class NativeLibraryLoader
             {
                 diagnostics.AppendLine($"  [NOT FOUND] {dep}");
             }
+        }
+
+        // Check for debug-build DLL dependencies that won't work on end-user machines
+        var debugDlls = new[] { "VCRUNTIME140D.dll", "ucrtbased.dll", "MSVCP140D.dll" };
+        bool hasDebugDep = false;
+        foreach (var debugDll in debugDlls)
+        {
+            if (NativeLibrary.TryLoad(debugDll, out _))
+                continue;
+            // Debug runtime not available - this is expected on end-user machines
+            hasDebugDep = true;
+        }
+        if (hasDebugDep)
+        {
+            diagnostics.AppendLine();
+            diagnostics.AppendLine("NOTE: Some native DLLs may have been built with Debug configuration");
+            diagnostics.AppendLine("and require VCRUNTIME140D.dll / ucrtbased.dll (debug C++ runtime).");
+            diagnostics.AppendLine("These are only available with Visual Studio installed.");
+            diagnostics.AppendLine("The native DLLs must be rebuilt with Release configuration.");
         }
 
         throw new DllNotFoundException(diagnostics.ToString());

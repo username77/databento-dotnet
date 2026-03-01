@@ -28,6 +28,21 @@ public interface ILiveBlockingClient : IAsyncDisposable
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Subscribe to a dataset and schema with a specified symbol type
+    /// </summary>
+    /// <param name="dataset">Dataset to subscribe to (e.g., "EQUS.MINI")</param>
+    /// <param name="schema">Schema type to receive</param>
+    /// <param name="symbols">List of symbols to subscribe to</param>
+    /// <param name="stypeIn">Input symbol type (e.g., SType.Continuous for "MNQ.v.0")</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task SubscribeAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        SType stypeIn,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Subscribe with historical replay from a specific start time
     /// </summary>
     /// <param name="dataset">Dataset to subscribe to</param>
@@ -40,6 +55,38 @@ public interface ILiveBlockingClient : IAsyncDisposable
         Schema schema,
         IEnumerable<string> symbols,
         DateTimeOffset start,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Subscribe with historical replay from a specific start time and a specified symbol type
+    /// </summary>
+    /// <param name="dataset">Dataset to subscribe to</param>
+    /// <param name="schema">Schema type to receive</param>
+    /// <param name="symbols">List of symbols to subscribe to</param>
+    /// <param name="start">Start time for historical replay</param>
+    /// <param name="stypeIn">Input symbol type (e.g., SType.Continuous for "MNQ.v.0")</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task SubscribeWithReplayAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        DateTimeOffset start,
+        SType stypeIn,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Subscribe with market-by-order (MBO) snapshot at subscription time and a specified symbol type
+    /// </summary>
+    /// <param name="dataset">Dataset to subscribe to</param>
+    /// <param name="schema">Schema type to receive</param>
+    /// <param name="symbols">List of symbols to subscribe to</param>
+    /// <param name="stypeIn">Input symbol type (e.g., SType.Continuous for "MNQ.v.0")</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task SubscribeWithSnapshotAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        SType stypeIn,
         CancellationToken cancellationToken = default);
 
     /// <summary>

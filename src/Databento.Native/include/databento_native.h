@@ -271,6 +271,77 @@ DATABENTO_API int dbento_live_subscribe_with_replay(
 );
 
 /**
+ * Subscribe to data streams with a specified symbol type (Issue #20)
+ * @param handle Live client handle
+ * @param dataset Dataset name (e.g., "GLBX.MDP3")
+ * @param schema Schema name (e.g., "trades", "mbp-1", "ohlcv-1s")
+ * @param symbols Array of symbol strings
+ * @param symbol_count Number of symbols in array
+ * @param stype_in Input symbol type string (e.g., "raw_symbol", "continuous", "smart")
+ * @param error_buffer Buffer for error messages
+ * @param error_buffer_size Size of error buffer
+ * @return 0 on success, negative error code on failure
+ */
+DATABENTO_API int dbento_live_subscribe_ex(
+    DbentoLiveClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    const char* stype_in,
+    char* error_buffer,
+    size_t error_buffer_size
+);
+
+/**
+ * Subscribe with intraday replay and a specified symbol type (Issue #20)
+ * @param handle Live client handle
+ * @param dataset Dataset name
+ * @param schema Schema name
+ * @param symbols Array of symbol strings
+ * @param symbol_count Number of symbols
+ * @param start_time_ns Start time in nanoseconds since Unix epoch
+ * @param stype_in Input symbol type string
+ * @param error_buffer Buffer for error messages
+ * @param error_buffer_size Size of error buffer
+ * @return 0 on success, negative error code on failure
+ */
+DATABENTO_API int dbento_live_subscribe_with_replay_ex(
+    DbentoLiveClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    int64_t start_time_ns,
+    const char* stype_in,
+    char* error_buffer,
+    size_t error_buffer_size
+);
+
+/**
+ * Subscribe with snapshot and a specified symbol type (Issue #20)
+ * @param handle Live client handle
+ * @param dataset Dataset name
+ * @param schema Schema name
+ * @param symbols Array of symbol strings
+ * @param symbol_count Number of symbols
+ * @param stype_in Input symbol type string
+ * @param error_buffer Buffer for error messages
+ * @param error_buffer_size Size of error buffer
+ * @return 0 on success, negative error code on failure
+ */
+DATABENTO_API int dbento_live_subscribe_with_snapshot_ex(
+    DbentoLiveClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    const char* stype_in,
+    char* error_buffer,
+    size_t error_buffer_size
+);
+
+/**
  * Get current connection state (Phase 15)
  * @param handle Live client handle
  * @return Connection state: 0=Disconnected, 1=Connecting, 2=Connected, 3=Streaming
@@ -371,6 +442,77 @@ DATABENTO_API int dbento_live_blocking_subscribe_with_snapshot(
     const char* schema,
     const char** symbols,
     size_t symbol_count,
+    char* error_buffer,
+    size_t error_buffer_size
+);
+
+/**
+ * Subscribe with a specified symbol type (LiveBlocking, Issue #20)
+ * @param handle LiveBlocking client handle
+ * @param dataset Dataset name
+ * @param schema Schema name
+ * @param symbols Array of symbol strings
+ * @param symbol_count Number of symbols
+ * @param stype_in Input symbol type string (e.g., "raw_symbol", "continuous")
+ * @param error_buffer Buffer for error messages
+ * @param error_buffer_size Size of error buffer
+ * @return 0 on success, negative error code on failure
+ */
+DATABENTO_API int dbento_live_blocking_subscribe_ex(
+    DbentoLiveClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    const char* stype_in,
+    char* error_buffer,
+    size_t error_buffer_size
+);
+
+/**
+ * Subscribe with replay and a specified symbol type (LiveBlocking, Issue #20)
+ * @param handle LiveBlocking client handle
+ * @param dataset Dataset name
+ * @param schema Schema name
+ * @param symbols Array of symbol strings
+ * @param symbol_count Number of symbols
+ * @param start_time_ns Start time in nanoseconds since Unix epoch
+ * @param stype_in Input symbol type string
+ * @param error_buffer Buffer for error messages
+ * @param error_buffer_size Size of error buffer
+ * @return 0 on success, negative error code on failure
+ */
+DATABENTO_API int dbento_live_blocking_subscribe_with_replay_ex(
+    DbentoLiveClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    int64_t start_time_ns,
+    const char* stype_in,
+    char* error_buffer,
+    size_t error_buffer_size
+);
+
+/**
+ * Subscribe with snapshot and a specified symbol type (LiveBlocking, Issue #20)
+ * @param handle LiveBlocking client handle
+ * @param dataset Dataset name
+ * @param schema Schema name
+ * @param symbols Array of symbol strings
+ * @param symbol_count Number of symbols
+ * @param stype_in Input symbol type string
+ * @param error_buffer Buffer for error messages
+ * @param error_buffer_size Size of error buffer
+ * @return 0 on success, negative error code on failure
+ */
+DATABENTO_API int dbento_live_blocking_subscribe_with_snapshot_ex(
+    DbentoLiveClientHandle handle,
+    const char* dataset,
+    const char* schema,
+    const char** symbols,
+    size_t symbol_count,
+    const char* stype_in,
     char* error_buffer,
     size_t error_buffer_size
 );

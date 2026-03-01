@@ -34,6 +34,23 @@ public interface ILiveClient : IAsyncDisposable
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Subscribe to a data stream with a specified symbol type
+    /// </summary>
+    /// <param name="dataset">Dataset name (e.g., "GLBX.MDP3")</param>
+    /// <param name="schema">Schema type</param>
+    /// <param name="symbols">List of symbols to subscribe to</param>
+    /// <param name="stypeIn">Input symbol type (e.g., SType.Continuous for "MNQ.v.0")</param>
+    /// <param name="startTime">Optional start time for intraday replay</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task SubscribeAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        SType stypeIn,
+        DateTimeOffset? startTime = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Subscribe to a data stream with initial snapshot
     /// </summary>
     /// <param name="dataset">Dataset name (e.g., "GLBX.MDP3")</param>
@@ -44,6 +61,21 @@ public interface ILiveClient : IAsyncDisposable
         string dataset,
         Schema schema,
         IEnumerable<string> symbols,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Subscribe to a data stream with initial snapshot and a specified symbol type
+    /// </summary>
+    /// <param name="dataset">Dataset name (e.g., "GLBX.MDP3")</param>
+    /// <param name="schema">Schema type</param>
+    /// <param name="symbols">List of symbols to subscribe to</param>
+    /// <param name="stypeIn">Input symbol type (e.g., SType.Continuous for "MNQ.v.0")</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task SubscribeWithSnapshotAsync(
+        string dataset,
+        Schema schema,
+        IEnumerable<string> symbols,
+        SType stypeIn,
         CancellationToken cancellationToken = default);
 
     /// <summary>
