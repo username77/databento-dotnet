@@ -9,7 +9,7 @@
 
     <!-- Package Information -->
     <PackageId>Databento.Client</PackageId>
-    <Version>5.2.3</Version>
+    <Version>5.3.0</Version>
     <Authors>Alparse</Authors>
     <Company>Databento</Company>
     <Product>databento-dotnet</Product>
@@ -20,7 +20,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/Alparse/databento-dotnet</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>v5.2.3: Fix native DLLs built with debug configuration that required VCRUNTIME140D.dll/ucrtbased.dll (Issue #18)</PackageReleaseNotes>
+    <PackageReleaseNotes>v5.3.0: BREAKING — SchemaDateRange.Start and .End changed from string to DateTimeOffset for type consistency with DatasetRange (Issue #21). If you accessed these as strings, use .ToString("o") for equivalent output.</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
     <!-- XML Documentation -->

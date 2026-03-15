@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Databento.Client.Models.Metadata;
 
 /// <summary>
@@ -24,6 +26,7 @@ public class DatasetRange
     /// <summary>
     /// Duration of available data
     /// </summary>
+    [JsonIgnore]
     public TimeSpan Duration => End - Start;
 
     public override string ToString()

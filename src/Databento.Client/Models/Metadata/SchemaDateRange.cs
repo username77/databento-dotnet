@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Databento.Client.Models.Metadata;
 
 /// <summary>
@@ -6,17 +8,23 @@ namespace Databento.Client.Models.Metadata;
 public class SchemaDateRange
 {
     /// <summary>
-    /// Start timestamp (ISO 8601)
+    /// Start timestamp
     /// </summary>
-    public string Start { get; set; } = string.Empty;
+    public DateTimeOffset Start { get; set; }
 
     /// <summary>
-    /// End timestamp (ISO 8601, exclusive)
+    /// End timestamp (exclusive)
     /// </summary>
-    public string End { get; set; } = string.Empty;
+    public DateTimeOffset End { get; set; }
+
+    /// <summary>
+    /// Duration of available data for this schema
+    /// </summary>
+    [JsonIgnore]
+    public TimeSpan Duration => End - Start;
 
     public override string ToString()
     {
-        return $"{Start} to {End}";
+        return $"{Start:yyyy-MM-dd HH:mm:ss} to {End:yyyy-MM-dd HH:mm:ss}";
     }
 }
