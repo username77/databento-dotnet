@@ -98,3 +98,7 @@ nupkg/
 
 # Data files
 *.dbn
+
+# Internal scratchpads
+testscratchpad1.internal/
+testScratchpad2.internal/

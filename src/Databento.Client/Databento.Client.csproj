@@ -9,7 +9,7 @@
 
     <!-- Package Information -->
     <PackageId>Databento.Client</PackageId>
-    <Version>5.3.0</Version>
+    <Version>5.3.1</Version>
     <Authors>Alparse</Authors>
     <Company>Databento</Company>
     <Product>databento-dotnet</Product>
@@ -20,7 +20,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/Alparse/databento-dotnet</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>v5.3.0: BREAKING — SchemaDateRange.Start and .End changed from string to DateTimeOffset for type consistency with DatasetRange (Issue #21). If you accessed these as strings, use .ToString("o") for equivalent output.</PackageReleaseNotes>
+    <PackageReleaseNotes>v5.3.1: Fix Record.FromBytes failing when ts_out is enabled — records now deserialize correctly with the extra 8-byte gateway timestamp. Added TsOutNs and TsOut properties to expose the gateway send timestamp (Issue #23).</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
     <!-- XML Documentation -->

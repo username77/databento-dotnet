@@ -32,6 +32,20 @@ public abstract class Record
         DateTimeOffset.FromUnixTimeMilliseconds(TimestampNs / 1_000_000);
 
     /// <summary>
+    /// Gateway send timestamp in nanoseconds since Unix epoch.
+    /// Only populated when SendTsOut is enabled on the live client.
+    /// </summary>
+    public long? TsOutNs { get; internal set; }
+
+    /// <summary>
+    /// Gateway send timestamp as DateTimeOffset.
+    /// Only populated when SendTsOut is enabled on the live client.
+    /// </summary>
+    public DateTimeOffset? TsOut => TsOutNs.HasValue
+        ? DateTimeOffset.FromUnixTimeMilliseconds(TsOutNs.Value / 1_000_000)
+        : null;
+
+    /// <summary>
     /// Raw DBN-format bytes for this record (if available)
     /// </summary>
     internal byte[]? RawBytes { get; set; }
@@ -56,82 +70,118 @@ public abstract class Record
         long tsEvent = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(bytes.Slice(8, 8));
 
         // Dispatch to appropriate record type based on RType
-        Record result = (rtype, bytes.Length) switch
+        // Use minimum size matching (>=) to support ts_out field (+8 bytes when enabled)
+        Record result = rtype switch
         {
             // Trade messages (48 bytes) - Mbp0 / Trades schema
-            (0x00, 48) => DeserializeTradeMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            0x00 when bytes.Length >= 48 => DeserializeTradeMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
             // MBO messages (56 bytes)
-            (0xA0, 56) => DeserializeMboMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            0xA0 when bytes.Length >= 56 => DeserializeMboMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
             // MBP-1 messages (80 bytes)
             // Note: RType 0x01 is used for both MBP-1 and TBBO schemas (they're binary-identical)
-            // TbboMessage exists as a type but can't be distinguished at deserialization without schema context
-            (0x01, 80) => DeserializeMbp1Msg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            0x01 when bytes.Length >= 80 => DeserializeMbp1Msg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
-            // MBP-10 messages (368 bytes) - FIXED: was 0x02, correct is 0x0A
-            (0x0A, 368) => DeserializeMbp10Msg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            // MBP-10 messages (368 bytes)
+            0x0A when bytes.Length >= 368 => DeserializeMbp10Msg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
-            // OHLCV messages (56 bytes) - multiple RType values - FIXED: All values corrected
-            (0x11, 56) => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // Deprecated
-            (0x20, 56) => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // 1s - FIXED: was 0x12
-            (0x21, 56) => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // 1m - FIXED: was 0x13
-            (0x22, 56) => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // 1h - FIXED: was 0x14
-            (0x23, 56) => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // 1d - FIXED: was 0x15
-            (0x24, 56) => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // EOD - FIXED: was 0x16
+            // OHLCV messages (56 bytes) - multiple RType values
+            0x11 when bytes.Length >= 56 => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // Deprecated
+            0x20 when bytes.Length >= 56 => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // 1s
+            0x21 when bytes.Length >= 56 => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // 1m
+            0x22 when bytes.Length >= 56 => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // 1h
+            0x23 when bytes.Length >= 56 => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // 1d
+            0x24 when bytes.Length >= 56 => DeserializeOhlcvMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // EOD
 
-            // Status messages (40 bytes) - FIXED: was 0x17, correct is 0x12
-            (0x12, 40) => DeserializeStatusMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            // Status messages (40 bytes)
+            0x12 when bytes.Length >= 40 => DeserializeStatusMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
-            // Instrument definition messages (520 bytes) - FIXED: was 0x18, correct is 0x13
-            (0x13, 520) => DeserializeInstrumentDefMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            // Instrument definition messages (520 bytes)
+            0x13 when bytes.Length >= 520 => DeserializeInstrumentDefMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
-            // Imbalance messages (112 bytes) - FIXED: was 0x19, correct is 0x14
-            (0x14, 112) => DeserializeImbalanceMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            // Imbalance messages (112 bytes)
+            0x14 when bytes.Length >= 112 => DeserializeImbalanceMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
-            // Error messages (320 bytes) - FIXED: was 0x1A, correct is 0x15
-            (0x15, 320) => DeserializeErrorMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            // Error messages (320 bytes)
+            0x15 when bytes.Length >= 320 => DeserializeErrorMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
-            // Symbol mapping messages (176 bytes) - FIXED: was 0x1B, correct is 0x16
-            (0x16, 176) => DeserializeSymbolMappingMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            // Symbol mapping messages (176 bytes)
+            0x16 when bytes.Length >= 176 => DeserializeSymbolMappingMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
-            // System messages (320 bytes) - FIXED: was 0x1C, correct is 0x17
-            (0x17, 320) => DeserializeSystemMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            // System messages (320 bytes)
+            0x17 when bytes.Length >= 320 => DeserializeSystemMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
-            // Statistics messages (80 bytes) - FIXED: was 0x1D, correct is 0x18
-            (0x18, 80) => DeserializeStatMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            // Statistics messages (80 bytes)
+            0x18 when bytes.Length >= 80 => DeserializeStatMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
             // CMBP-1 messages (80 bytes)
-            (0xB1, 80) => DeserializeCmbp1Msg(bytes, rtype, publisherId, instrumentId, tsEvent), // Cmbp1
+            0xB1 when bytes.Length >= 80 => DeserializeCmbp1Msg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
-            // Tcbbo (Trade with Consolidated BBO) - 80 bytes, distinct RType
-            (0xC2, 80) => DeserializeTcbboMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
+            // Tcbbo (Trade with Consolidated BBO) - 80 bytes
+            0xC2 when bytes.Length >= 80 => DeserializeTcbboMsg(bytes, rtype, publisherId, instrumentId, tsEvent),
 
             // CBBO messages (80 bytes) - multiple types
-            (0xC0, 80) => DeserializeCbboMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // Cbbo1S
-            (0xC1, 80) => DeserializeCbboMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // Cbbo1M
+            0xC0 when bytes.Length >= 80 => DeserializeCbboMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // Cbbo1S
+            0xC1 when bytes.Length >= 80 => DeserializeCbboMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // Cbbo1M
 
             // BBO messages (80 bytes) - multiple types
-            (0xC3, 80) => DeserializeBboMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // Bbo1S
-            (0xC4, 80) => DeserializeBboMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // Bbo1M
+            0xC3 when bytes.Length >= 80 => DeserializeBboMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // Bbo1S
+            0xC4 when bytes.Length >= 80 => DeserializeBboMsg(bytes, rtype, publisherId, instrumentId, tsEvent), // Bbo1M
 
-            // System/metadata messages
+            // Unknown record types
             _ => new UnknownRecord { RType = rtype, RawData = bytes.ToArray() }
         };
 
         // Store raw bytes for potential writing
         result.RawBytes = bytes.ToArray();
 
+        // Extract ts_out if present (record is 8 bytes larger than expected)
+        // ts_out is the gateway send timestamp appended when SendTsOut is enabled
+        if (result is not UnknownRecord)
+        {
+            int expectedSize = GetExpectedRecordSize(rtype);
+            if (expectedSize > 0 && bytes.Length == expectedSize + 8)
+            {
+                result.TsOutNs = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(
+                    bytes.Slice(expectedSize, 8));
+            }
+        }
+
         return result;
     }
+
+    /// <summary>
+    /// Get the expected base size (without ts_out) for a given record type
+    /// </summary>
+    private static int GetExpectedRecordSize(byte rtype) => rtype switch
+    {
+        0x00 => 48,   // Trade
+        0xA0 => 56,   // MBO
+        0x01 => 80,   // MBP-1
+        0x0A => 368,  // MBP-10
+        0x11 or 0x20 or 0x21 or 0x22 or 0x23 or 0x24 => 56, // OHLCV
+        0x12 => 40,   // Status
+        0x13 => 520,  // InstrumentDef
+        0x14 => 112,  // Imbalance
+        0x15 => 320,  // Error
+        0x16 => 176,  // SymbolMapping
+        0x17 => 320,  // System
+        0x18 => 80,   // Statistics
+        0xB1 => 80,   // CMBP-1
+        0xC2 => 80,   // Tcbbo
+        0xC0 or 0xC1 => 80, // CBBO
+        0xC3 or 0xC4 => 80, // BBO
+        _ => 0
+    };
 
     private static TradeMessage DeserializeTradeMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 48;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid TradeMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid TradeMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         // TradeMsg layout (48 bytes):
         // offset 16-23: price (int64)
@@ -171,10 +221,10 @@ public abstract class Record
     private static MboMessage DeserializeMboMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 56;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid MboMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid MboMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         // MboMsg layout (56 bytes):
         // offset 16-23: order_id (uint64)
@@ -221,10 +271,10 @@ public abstract class Record
     private static Mbp1Message DeserializeMbp1Msg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 80;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid Mbp1Msg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid Mbp1Msg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         // Mbp1Msg layout (80 bytes):
         // offset 16-23: price (int64)
@@ -273,10 +323,10 @@ public abstract class Record
     private static Mbp10Message DeserializeMbp10Msg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 368;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid Mbp10Msg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid Mbp10Msg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         // Mbp10Msg layout (368 bytes): same as Mbp1 but with 10 levels (320 bytes)
 
@@ -340,10 +390,10 @@ public abstract class Record
     private static OhlcvMessage DeserializeOhlcvMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 56;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid OhlcvMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid OhlcvMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         // OhlcvMsg layout (56 bytes):
         // offset 16-23: open (int64)
@@ -375,10 +425,10 @@ public abstract class Record
     private static StatusMessage DeserializeStatusMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 40;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid StatusMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid StatusMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         // StatusMsg layout (40 bytes):
         // offset 16-23: ts_recv (uint64)
@@ -420,8 +470,8 @@ public abstract class Record
         // Specification: https://docs.rs/dbn/latest/dbn/record/struct.InstrumentDefMsg.html
         // All offsets verified against databento-cpp record.hpp
         const int ExpectedSize = 520;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid InstrumentDefMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid InstrumentDefMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         return new InstrumentDefMessage
         {
@@ -515,10 +565,10 @@ public abstract class Record
     private static ImbalanceMessage DeserializeImbalanceMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 112;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid ImbalanceMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid ImbalanceMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         long tsRecv = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(bytes.Slice(16, 8));
         long refPrice = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(bytes.Slice(24, 8));
@@ -545,10 +595,10 @@ public abstract class Record
     private static ErrorMessage DeserializeErrorMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 320;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid ErrorMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid ErrorMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         string error = ReadCString(bytes.Slice(16, 302));
         byte code = bytes[318];
@@ -569,10 +619,10 @@ public abstract class Record
     private static SymbolMappingMessage DeserializeSymbolMappingMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 176;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid SymbolMappingMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid SymbolMappingMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         SType stypeIn = (SType)bytes[16];
         string stypeInSymbol = ReadCString(bytes.Slice(17, 71));
@@ -599,10 +649,10 @@ public abstract class Record
     private static SystemMessage DeserializeSystemMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 320;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid SystemMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid SystemMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         string message = ReadCString(bytes.Slice(16, 303));
         byte code = bytes[319];
@@ -621,10 +671,10 @@ public abstract class Record
     private static StatMessage DeserializeStatMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 80;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid StatMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid StatMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         long tsRecv = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(bytes.Slice(16, 8));
         long tsRef = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(bytes.Slice(24, 8));
@@ -659,10 +709,10 @@ public abstract class Record
     private static BboMessage DeserializeBboMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 80;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid BboMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid BboMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         long price = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(bytes.Slice(16, 8));
         uint size = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(bytes.Slice(24, 4));
@@ -691,10 +741,10 @@ public abstract class Record
     private static CbboMessage DeserializeCbboMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 80;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid CbboMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid CbboMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         long price = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(bytes.Slice(16, 8));
         uint size = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(bytes.Slice(24, 4));
@@ -723,10 +773,10 @@ public abstract class Record
     private static Cmbp1Message DeserializeCmbp1Msg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 80;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid Cmbp1Msg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid Cmbp1Msg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         long price = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(bytes.Slice(16, 8));
         uint size = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(bytes.Slice(24, 4));
@@ -757,10 +807,10 @@ public abstract class Record
     private static TcbboMessage DeserializeTcbboMsg(ReadOnlySpan<byte> bytes, byte rtype,
         ushort publisherId, uint instrumentId, long tsEvent)
     {
-        // MEDIUM FIX: Exact size check instead of minimum
+        // Minimum size check to support ts_out (+8 bytes when enabled)
         const int ExpectedSize = 80;
-        if (bytes.Length != ExpectedSize)
-            throw new ArgumentException($"Invalid TcbboMsg size: expected {ExpectedSize}, got {bytes.Length}", nameof(bytes));
+        if (bytes.Length < ExpectedSize)
+            throw new ArgumentException($"Invalid TcbboMsg size: minimum {ExpectedSize}, got {bytes.Length}", nameof(bytes));
 
         // TcbboMsg has the same structure as Cmbp1Msg but represents trade with consolidated BBO
         long price = System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(bytes.Slice(16, 8));
